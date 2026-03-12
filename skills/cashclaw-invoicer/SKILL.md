@@ -1,20 +1,19 @@
 ---
 name: cashclaw-invoicer
-description: Handles invoice creation, payment tracking, and automated reminders via Polygon crypto. Accepts USDC and MATIC payments directly to wallet. No middleman, global, instant.
+description: Handles crypto invoice creation, on-chain payment verification, and automated reminders via viem + public Polygon RPC. Accepts USDC payments directly to wallet. No API keys, no middleman.
 metadata:
   {
     "openclaw":
       {
-        "emoji": "\U0001F4B3",
-        "requires": { "bins": ["node", "polygon-agent"] },
+        "emoji": "\u0001F4B3",
+        "requires": { "bins": ["node"], "env": [] },
         "install":
           [
             {
               "id": "npm",
               "kind": "node",
-              "package": "@polygonlabs/agent-cli",
-              "bins": ["polygon-agent"],
-              "label": "Install Polygon Agent CLI"
+              "package": "viem",
+              "label": "Install viem for on-chain operations"
             }
           ]
       }
@@ -23,38 +22,61 @@ metadata:
 
 # CashClaw Invoicer - Crypto Edition
 
-You handle all payment operations for CashClaw using cryptocurrency. You create invoices, generate payment addresses, track on-chain payments, and send automated reminders. Every satoshi earned must be tracked accurately.
+You handle all payment operations for CashClaw using cryptocurrency. You verify payments on-chain before delivering work. 
 
-**Why Crypto?**
-- ⚡ Instant settlements (2-3 seconds)
-- 🌎 Global (no borders, no banks)
-- 💰 Very low fees (~$0.01 per transaction)
-- 🔒 Non-custodial (you control the wallet)
-- 🚫 No restrictions (works in Iraq, Iran, etc.)
+**Critical: Payment MUST be verified in QUOTE stage, BEFORE transitioning to DELIVER.**
+
+## Payment Flow (MUST FOLLOW THIS EXACT ORDER)
+
+```
+┌─────────┐    ┌─────────┐    ┌──────────────────┐    ┌─────────┐
+│  INTAKE │ -> │  QUOTE  │ -> │ VERIFY PAYMENT   │ -> │ DELIVER│
+└─────────┘    └─────────┘    │ (on-chain check) │    └─────────┘
+                              └──────────────────┘
+```
+
+### STAGE 1: QUOTE (Generate Invoice + Wait for Payment)
+
+1. Calculate final amount from mission details
+2. Generate invoice with your Polygon wallet address
+3. **Send invoice to client and WAIT for payment**
+4. **Monitor wallet for incoming USDC using crypto-ops.js**
+5. **Only when payment confirmed ON-CHAIN → transition to DELIVER**
+
+### STAGE 2: DELIVER (Only After Payment Verified!)
+
+1. Confirm payment was received (balance increased)
+2. Transition mission to DELIVER
+3. Hand over deliverables
+4. Log in ledger
+
+**NEVER deliver work without verifying payment on-chain!**
 
 ## Prerequisites
 
-1. **Polygon Agent CLI** installed:
-   ```bash
-   npm install -g @polygonlabs/agent-cli
-   ```
-
-2. **Set up wallet**:
-   ```bash
-   polygon-agent setup
-   ```
-
-3. **Get your wallet address**:
-   ```bash
-   polygon-agent wallet --address
-   ```
+1. **Wallet**: You need a Polygon wallet (MetaMask, Phantom set to Polygon, etc.)
+2. **Your payment address**: Set in config
 
 ## Supported Tokens
 
-| Token | Symbol | Network | Address |
-|-------|--------|---------|---------|
-| USDC | USDC | Polygon | 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 |
-| MATIC | MATIC | Polygon (native) | - |
+| Token | Symbol | Contract Address | Network |
+|-------|--------|-----------------|---------|
+| USDC | USDC | 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359 | Polygon |
+| MATIC | MATIC | (native) | Polygon |
+
+## Configuration
+
+Set your Polygon wallet address:
+
+```bash
+# Add to ~/.cashclaw/config.json
+{
+  "payment": {
+    "address": "0xYourPolygonAddress...",
+    "network": "polygon"
+  }
+}
+```
 
 ## Invoice Creation
 
@@ -75,74 +97,89 @@ You handle all payment operations for CashClaw using cryptocurrency. You create 
   ],
   "total_usdc": 29,
   "payment_address": "0xYourWalletAddress...",
-  "status": "pending",
+  "status": "pending_payment",
   "created_at": "2026-03-12"
 }
 ```
 
-### Creating an Invoice
+### Creating Invoice in QUOTE Stage
 
-1. Get your wallet address:
-   ```bash
-   polygon-agent wallet --address
-   ```
+When mission is in QUOTE stage:
 
-2. Create invoice with payment details:
-   - Include your Polygon wallet address
-   - Specify amount in USDC
-   - Set clear payment terms
-
-3. Send invoice to client:
+1. **Generate invoice** with payment details
+2. **Send to client**:
 ```
-Subject: Invoice #001 - SEO Audit
+Subject: Invoice #001 - {Service}
 
 Dear {client_name},
 
-Thank you for your business! Please find the invoice details below:
+Please find the invoice details below:
 
-Service: SEO Audit - Standard Tier
-Amount: 29 USDC
+Service: {service_description}
+Amount: {amount} USDC
 
-Payment Address: 0x....................................
-Network: Polygon (MATIC)
+Payment Address: {your_polygon_address}
+Network: Polygon (NOT Ethereum!)
+Token: USDC
 
-You can pay using:
-- Phantom Wallet
-- MetaMask
-- Any Polygon-compatible wallet
+Payment Instructions:
+1. Send exactly {amount} USDC to the address above
+2. Network must be Polygon (Chain ID 137)
+3. After sending, reply with the transaction hash
 
-Once payment is confirmed on-chain, I will deliver the work immediately.
+I will deliver the work immediately after payment is confirmed on-chain.
 
 Thank you!
 ```
 
-## Payment Tracking
+3. **Monitor for payment** (see below)
 
-### Check Payment Status
+## Payment Monitoring
+
+### Using crypto-ops.js Script
 
 ```bash
-# Check your balance
-polygon-agent balances
+# Check balance anytime
+node scripts/crypto-ops.js balance --address 0xYourAddress
+
+# Wait for payment (polls every 10s, timeout 5min)
+node scripts/crypto-ops.js wait-payment --address 0xYourAddress --amount 29
 ```
 
-### On-Chain Confirmation
+### Manual Payment Verification
 
-Payment is confirmed when:
-1. Transaction shows on Polygon scanner
-2. Balance increases by expected amount
-
-Example scanner: https://polygonscan.com/address/YOUR_WALLET
-
-### Ledger Entry Format
-
-Log every invoice event:
-
-```json
-{"ts":"2026-03-12T12:00:00Z","event":"invoice_created","mission_id":"MISSION-20260312-001","amount":29,"currency":"USDC","status":"pending"}
-{"ts":"2026-03-12T12:30:00Z","event":"payment_received","mission_id":"MISSION-20260312-001","amount":29,"currency":"USDC","tx_hash":"0x...","confirmed":true}
+1. Check your USDC balance:
+```bash
+node scripts/crypto-ops.js balance --address YOUR_ADDRESS
 ```
 
-## Payment Reminder Flow
+2. Compare to expected amount
+3. If balance >= invoice amount, payment confirmed!
+
+### On-Chain Verification Process
+
+```
+Client sends USDC → Wait for 1-2 block confirmations → Check balance → If match: DELIVER
+```
+
+## Payment Status States
+
+| Status | Meaning | Action |
+|--------|---------|--------|
+| pending_payment | Invoice sent, waiting | Monitor wallet |
+| payment_received | On-chain confirmed | Transition to DELIVER |
+| completed | Work delivered | Log and archive |
+
+## The Critical Rule
+
+**QUOTE → VERIFY → DELIVER**
+
+- In QUOTE stage: Send invoice AND wait for payment
+- Do NOT move to DELIVER until payment confirmed on-chain
+- Use `crypto-ops.js balance` or `wait-payment` to verify
+- Only after balance increases by expected amount → DELIVER
+
+## Sending Payment Reminders
 
 ### Day 0: Invoice Sent
 
@@ -154,17 +191,16 @@ Hi {name},
 Please find your invoice for {service}.
 
 Amount: {amount} USDC
-Payment Address: {your_wallet_address}
-Network: Polygon
+Payment Address: {wallet_address}
+Network: Polygon (Chain ID 137)
+Token: USDC (0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359)
 
-Pay using any Polygon wallet (Phantom, MetaMask, etc.)
+Once payment is confirmed on-chain, I will deliver your work immediately.
 
-Thank you for your business!
+Thank you!
 ```
 
 ### Day 3: Gentle Reminder
-
-Only send if payment not received.
 
 ```
 Subject: Friendly reminder: Invoice #{number}
@@ -176,7 +212,7 @@ Just a quick reminder that invoice #{number} for {amount} USDC is still pending.
 Payment Address: {wallet_address}
 Network: Polygon
 
-If you have already sent payment, please ignore this message.
+If you have already sent payment, please reply with the transaction hash so I can verify.
 
 Thanks!
 ```
@@ -188,128 +224,53 @@ Subject: Invoice #{number} - Payment reminder
 
 Hi {name},
 
-This is a follow-up regarding invoice #{number} for {amount} USDC.
+Following up on invoice #{number} for {amount} USDC.
 
 Please send payment to:
 {wallet_address}
 Network: Polygon
 
-If there are any issues with payment, please let me know.
+If there are any issues, please let me know.
 
 Best regards
 ```
 
-### Day 14: Final Notice
+## Ledger Entry Format
 
+```json
+{"ts":"2026-03-12T12:00:00Z","event":"invoice_created","mission_id":"MISSION-20260312-001","amount":29,"currency":"USDC","status":"pending_payment"}
+{"ts":"2026-03-12T12:30:00Z","event":"payment_verified","mission_id":"MISSION-20260312-001","amount":29,"currency":"USDC","balance_before":"0","balance_after":"29000000","tx_hash":"0x...","status":"payment_received"}
+{"ts":"2026-03-12T12:35:00Z","event":"deliver","mission_id":"MISSION-20260312-001","status":"completed"}
 ```
-Subject: Final notice: Invoice #{number}
-
-Hi {name},
-
-This is our final reminder regarding invoice #{number} for {amount} USDC, which is now 14 days past due.
-
-Please complete payment at your earliest convenience:
-{wallet_address}
-Network: Polygon
-
-If we do not receive payment or hear from you within 48 hours, we may need to pause any ongoing services.
-
-Regards,
-```
-
-### Reminder Rules
-
-1. Never send more than 1 reminder per day
-2. Stop reminders once payment is confirmed on-chain
-3. If client responds, handle personally
-4. After Day 14 with no response, escalate to operator
-
-## Receiving Payments
-
-### Getting Your Address
-
-```bash
-polygon-agent wallet --address
-```
-
-### Sharing with Clients
-
-Send clients your:
-- Wallet address
-- Network: Polygon (not Ethereum!)
-- Token: USDC
-
-### Confirming Payment
-
-```bash
-# Check balance
-polygon-agent balances
-
-# View recent transactions
-polygon-agent transaction-history
-```
-
-## Sending Payments (Payouts)
-
-If you need to pay others:
-
-```bash
-# Send USDC
-polygon-agent send-token --symbol USDC --amount 10 --to 0x...
-
-# Send MATIC
-polygon-agent send-native --amount 1 --to 0x...
-```
-
-## Token Swaps
-
-Need MATIC for gas? Swap USDC:
-
-```bash
-polygon-agent swap --from USDC --to MATIC --amount 10
-```
-
-## Multi-Currency Support
-
-| Currency | Code | Example |
-|----------|------|---------|
-| US Dollar (USDC) | USDC | 29 USDC |
-| MATIC | MATIC | 50 MATIC |
-
-Always confirm with client which token they prefer for payment.
-
-## Error Handling
-
-| Issue | Solution |
-|-------|----------|
-| Client sent to wrong network | Ask them to resend from Polygon network |
-| Client sent wrong token | Request correct token or convert manually |
-| Transaction pending | Wait for on-chain confirmation (usually ~2-3 sec) |
-| Low balance for gas | Use `polygon-agent swap` to get MATIC |
 
 ## Example Commands
 
 ```bash
-# Get your payment address
-polygon-agent wallet --address
+# Check wallet balance
+node scripts/crypto-ops.js balance --address 0xYourAddress
 
-# Check incoming payments
-polygon-agent balances
+# Wait for payment
+node scripts/crypto-ops.js wait-payment --address 0xYourAddress --amount 29
 
-# Send payment to someone
-polygon-agent send-token --symbol USDC --amount 5 --to 0x...
-
-# Swap tokens
-polygon-agent swap --from USDC --to MATIC --amount 10
+# Get USDC contract address
+node scripts/crypto-ops.js usdc-address
 ```
 
-## Integration with CashClaw Core
+## Common Issues
 
-When a mission reaches DELIVER stage:
+| Issue | Solution |
+|-------|----------|
+| Client sent on wrong network | Ask them to resend on Polygon (Chain ID 137) |
+| Client sent wrong token | Request USDC on Polygon |
+| Balance not updating | Wait for block confirmation (~2s) |
+| Using bridged USDC | Use native USDC: 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359 |
 
-1. Calculate final amount from mission details
-2. Generate invoice with your Polygon address
-3. Send to client via email/DM
-4. Monitor for payment via `polygon-agent balances`
-5. Once confirmed, mark mission complete
-6. Log in ledger
+## Contract Address (IMPORTANT!)
+
+**Use ONLY this native USDC address on Polygon:**
+
+```
+0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359
+```
+
+NOT the old bridged address!
