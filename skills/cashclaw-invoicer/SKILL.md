@@ -1,409 +1,36 @@
 ---
 name: cashclaw-invoicer
-description: Handles invoice creation, payment link generation, payment status tracking, and automated reminders via Stripe API. Supports multi-currency billing and recurring payments.
+description: Handles invoice creation, payment tracking, and automated reminders via Polygon crypto. Accepts USDC and MATIC payments directly to wallet. No middleman, global, instant.
 metadata:
   {
     "openclaw":
       {
         "emoji": "\U0001F4B3",
-        "requires": { "bins": ["node"], "env": ["STRIPE_SECRET_KEY"] },
+        "requires": { "bins": ["node", "polygon-agent"] },
         "install":
           [
             {
               "id": "npm",
               "kind": "node",
-              "package": "cashclaw",
-              "bins": ["cashclaw"],
-              "label": "Install CashClaw via npm"
+              "package": "@polygonlabs/agent-cli",
+              "bins": ["polygon-agent"],
+              "label": "Install Polygon Agent CLI"
             }
           ]
       }
   }
 ---
 
-# CashClaw Invoicer
-
-You handle all payment operations for CashClaw. You create invoices, generate
-payment links, track payment status, and send automated reminders. Every dollar
-earned must be tracked accurately. This is the skill that turns delivered work
-into collected revenue.
-
-## Prerequisites
-
-1. **Stripe account** with API access enabled.
-2. **STRIPE_SECRET_KEY** set in environment or `~/.cashclaw/config.json`.
-3. Node.js 18+ installed (for the stripe-ops.js script).
-
-Install the Stripe SDK:
-
-```bash
-npm install stripe
-```
-
-## Invoice Creation
-
-### When to Invoice
-
-- **Pre-payment model**: Create a payment link at ACCEPT stage. Client pays before work begins.
-- **Post-payment model**: Create an invoice at DELIVER stage. Client pays after receiving deliverables.
-- **Recurring services**: Create a Stripe subscription for monthly services (WhatsApp management, social media).
-
-### Invoice Data Structure
-
-```json
-{
-  "mission_id": "MISSION-20260223-001",
-  "client": {
-    "name": "Acme Corp",
-    "email": "billing@acme.com"
-  },
-  "items": [
-    {
-      "description": "SEO Audit - Standard Tier",
-      "quantity": 1,
-      "unit_amount": 2900,
-      "currency": "usd"
-    }
-  ],
-  "due_date": "2026-03-02",
-  "notes": "Thank you for choosing CashClaw!",
-  "metadata": {
-    "mission_id": "MISSION-20260223-001",
-    "service": "seo-audit",
-    "tier": "standard"
-  }
-}
-```
-
-### Using the stripe-ops.js Script
-
-```bash
-# Create a payment link
-node scripts/stripe-ops.js create-link \
-  --amount 2900 \
-  --currency usd \
-  --description "SEO Audit - Standard" \
-  --mission "MISSION-20260223-001"
-
-# Create a full invoice
-node scripts/stripe-ops.js create-invoice \
-  --email "billing@acme.com" \
-  --amount 2900 \
-  --currency usd \
-  --description "SEO Audit - Standard" \
-  --due-days 7
-
-# Check payment status
-node scripts/stripe-ops.js check-status \
-  --invoice "in_1234567890"
-
-# Send payment reminder
-node scripts/stripe-ops.js send-reminder \
-  --invoice "in_1234567890" \
-  --template "gentle"
-```
-
-### Using Stripe API Directly (curl)
-
-If the script is unavailable, use curl with the Stripe API:
-
-```bash
-# Create a customer
-curl https://api.stripe.com/v1/customers \
-  -u "$STRIPE_SECRET_KEY:" \
-  -d "email=client@example.com" \
-  -d "name=Client Name" \
-  -d "metadata[mission_id]=MISSION-20260223-001"
-
-# Create an invoice item
-curl https://api.stripe.com/v1/invoiceitems \
-  -u "$STRIPE_SECRET_KEY:" \
-  -d "customer=cus_xxxxx" \
-  -d "amount=2900" \
-  -d "currency=usd" \
-  -d "description=SEO Audit - Standard Tier"
-
-# Create and send the invoice
-curl https://api.stripe.com/v1/invoices \
-  -u "$STRIPE_SECRET_KEY:" \
-  -d "customer=cus_xxxxx" \
-  -d "collection_method=send_invoice" \
-  -d "days_until_due=7" \
-  -d "auto_advance=true"
-
-# Finalize the invoice
-curl -X POST https://api.stripe.com/v1/invoices/in_xxxxx/finalize \
-  -u "$STRIPE_SECRET_KEY:"
-
-# Send the invoice
-curl -X POST https://api.stripe.com/v1/invoices/in_xxxxx/send \
-  -u "$STRIPE_SECRET_KEY:"
-
-# Create a payment link (one-time)
-curl https://api.stripe.com/v1/payment_links \
-  -u "$STRIPE_SECRET_KEY:" \
-  -d "line_items[0][price_data][currency]=usd" \
-  -d "line_items[0][price_data][product_data][name]=SEO Audit" \
-  -d "line_items[0][price_data][unit_amount]=2900" \
-  -d "line_items[0][quantity]=1"
-
-# Check invoice status
-curl https://api.stripe.com/v1/invoices/in_xxxxx \
-  -u "$STRIPE_SECRET_KEY:"
-
-# List unpaid invoices
-curl "https://api.stripe.com/v1/invoices?status=open&limit=100" \
-  -u "$STRIPE_SECRET_KEY:"
-```
-
-## Payment Reminder Flow
-
-Automated reminders follow this exact schedule:
-
-### Day 0: Invoice Sent
-
-```
-Subject: Invoice #{number} from {Business Name}
-
-Hi {name},
-
-Please find your invoice for {service} attached.
-
-Amount: {currency} {amount}
-Due Date: {due_date}
-
-Pay now: {payment_link}
-
-Thank you for your business!
-
-Best,
-{Business Name}
-```
-
-### Day 3: Gentle Reminder
-
-Only send if invoice is still unpaid.
-
-```
-Subject: Friendly reminder: Invoice #{number}
-
-Hi {name},
-
-Just a quick reminder that invoice #{number} for {amount} is
-due on {due_date}.
-
-You can pay securely here: {payment_link}
-
-If you have already paid, please disregard this message.
-
-Thanks!
-{Business Name}
-```
-
-### Day 7: Follow-up
-
-```
-Subject: Invoice #{number} - Payment due
-
-Hi {name},
-
-Your invoice #{number} for {amount} is now past due.
-
-We would appreciate it if you could process payment at your
-earliest convenience: {payment_link}
-
-If there is an issue with the invoice or you need to discuss
-payment arrangements, please let us know.
-
-Best regards,
-{Business Name}
-```
-
-### Day 14: Final Notice
-
-```
-Subject: Final notice: Invoice #{number} overdue
-
-Hi {name},
-
-This is our final reminder regarding invoice #{number} for
-{amount}, which is now 14 days past due.
-
-Please process payment immediately: {payment_link}
-
-If we do not receive payment or hear from you within 48 hours,
-we may need to pause any ongoing services.
-
-If there are any issues, please reach out so we can work
-something out.
-
-Regards,
-{Business Name}
-```
-
-### Reminder Rules
-
-1. Never send more than 1 reminder per day.
-2. Stop reminders immediately once payment is received.
-3. If client responds to a reminder, pause automation and handle personally.
-4. After Day 14 with no response, escalate to operator -- do not send more reminders.
-5. Track all reminder events in `~/.cashclaw/ledger.jsonl`.
-
-## Multi-Currency Support
-
-Supported currencies and their Stripe codes:
-
-| Currency | Code | Smallest Unit | Example |
-|----------|------|---------------|---------|
-| US Dollar | usd | cents | $29.00 = 2900 |
-| Euro | eur | cents | 29.00 EUR = 2900 |
-| British Pound | gbp | pence | 29.00 GBP = 2900 |
-| Turkish Lira | try | kurus | 29.00 TRY = 2900 |
-| Canadian Dollar | cad | cents | $29.00 CAD = 2900 |
-| Australian Dollar | aud | cents | $29.00 AUD = 2900 |
-
-**Important**: Stripe uses the smallest currency unit (cents, pence, etc.).
-Always multiply the display amount by 100 before sending to Stripe.
-
-### Currency Detection
-
-- Default to USD unless client specifies otherwise.
-- Detect from client's location or previous invoices.
-- Always confirm currency with client before invoicing.
-
-## Payment Tracking
-
-### Ledger Entry Format
-
-Every payment event is logged to `~/.cashclaw/ledger.jsonl`:
-
-```json
-{"ts":"2026-02-23T12:00:00Z","event":"invoice_created","mission_id":"MISSION-20260223-001","invoice_id":"in_xxx","amount":2900,"currency":"usd"}
-{"ts":"2026-02-23T12:01:00Z","event":"invoice_sent","mission_id":"MISSION-20260223-001","invoice_id":"in_xxx"}
-{"ts":"2026-02-23T14:30:00Z","event":"payment_received","mission_id":"MISSION-20260223-001","invoice_id":"in_xxx","amount":2900,"currency":"usd","payment_id":"pi_xxx"}
-```
-
-### Dashboard Update
-
-After every payment event, update `~/.cashclaw/dashboard.json`:
-
-```json
-{
-  "pending_payments": [
-    {
-      "invoice_id": "in_xxx",
-      "mission_id": "MISSION-20260223-001",
-      "amount": 2900,
-      "currency": "usd",
-      "status": "open",
-      "due_date": "2026-03-02",
-      "reminder_stage": 0
-    }
-  ],
-  "recent_payments": [
-    {
-      "invoice_id": "in_yyy",
-      "amount": 900,
-      "currency": "usd",
-      "paid_at": "2026-02-22T10:00:00Z"
-    }
-  ]
-}
-```
-
-## Refund Handling
-
-If a client requests a refund:
-
-1. Verify the original payment in Stripe.
-2. Determine refund type:
-   - **Full refund**: Client unhappy with deliverable. Process immediately.
-   - **Partial refund**: Scope reduced or partial delivery. Calculate pro-rata.
-3. Process via Stripe:
-
-```bash
-# Full refund
-curl https://api.stripe.com/v1/refunds \
-  -u "$STRIPE_SECRET_KEY:" \
-  -d "payment_intent=pi_xxxxx"
-
-# Partial refund
-curl https://api.stripe.com/v1/refunds \
-  -u "$STRIPE_SECRET_KEY:" \
-  -d "payment_intent=pi_xxxxx" \
-  -d "amount=1500"
-```
-
-4. Log the refund event in the ledger.
-5. Update mission status to `refunded`.
-6. Send confirmation to client.
-
-## Recurring Billing
-
-For monthly services (WhatsApp Manager, Social Media):
-
-```bash
-# Create a product
-curl https://api.stripe.com/v1/products \
-  -u "$STRIPE_SECRET_KEY:" \
-  -d "name=Social Media Management - Monthly Full" \
-  -d "metadata[service]=social-media" \
-  -d "metadata[tier]=monthly-full"
-
-# Create a recurring price
-curl https://api.stripe.com/v1/prices \
-  -u "$STRIPE_SECRET_KEY:" \
-  -d "product=prod_xxxxx" \
-  -d "unit_amount=4900" \
-  -d "currency=usd" \
-  -d "recurring[interval]=month"
-
-# Create a subscription
-curl https://api.stripe.com/v1/subscriptions \
-  -u "$STRIPE_SECRET_KEY:" \
-  -d "customer=cus_xxxxx" \
-  -d "items[0][price]=price_xxxxx"
-```
-
-## Error Handling
-
-| Stripe Error | Meaning | Action |
-|-------------|---------|--------|
-| `card_declined` | Card was declined | Ask client for alternative payment method |
-| `expired_card` | Card has expired | Notify client to update card |
-| `incorrect_cvc` | Wrong CVC | Ask client to retry with correct CVC |
-| `processing_error` | Stripe processing issue | Retry after 5 minutes |
-| `rate_limit` | Too many API calls | Wait 60 seconds, then retry |
-
-Never expose raw Stripe error messages to clients. Translate them to
-human-friendly messages.
-
-## Example Commands
-
-```bash
-# Create and send an invoice
-cashclaw invoice --client "billing@acme.com" --amount 29 --service "SEO Audit" --due 7
-
-# Check all unpaid invoices
-cashclaw invoice --list --status unpaid
-
-# Send reminders for overdue invoices
-cashclaw invoice --remind --overdue
-
-# Process a refund
-cashclaw invoice --refund --invoice "in_xxxxx" --amount 29
-```
-
----
-
-# Crypto Payments (Polygon Agent CLI)
-
-CashClaw supports crypto payments via the Polygon Agent CLI. This enables agents to:
-- Create crypto wallets (EOA)
-- Receive USDC and MATIC payments
-- Transfer funds to any address
-- Swap tokens on DEXs
-- Register ERC-8004 agent identity
+# CashClaw Invoicer - Crypto Edition
+
+You handle all payment operations for CashClaw using cryptocurrency. You create invoices, generate payment addresses, track on-chain payments, and send automated reminders. Every satoshi earned must be tracked accurately.
+
+**Why Crypto?**
+- ⚡ Instant settlements (2-3 seconds)
+- 🌎 Global (no borders, no banks)
+- 💰 Very low fees (~$0.01 per transaction)
+- 🔒 Non-custodial (you control the wallet)
+- 🚫 No restrictions (works in Iraq, Iran, etc.)
 
 ## Prerequisites
 
@@ -412,110 +39,277 @@ CashClaw supports crypto payments via the Polygon Agent CLI. This enables agents
    npm install -g @polygonlabs/agent-cli
    ```
 
-2. **Set up wallet** (one command!):
+2. **Set up wallet**:
    ```bash
    polygon-agent setup
    ```
 
-## Crypto Operations
+3. **Get your wallet address**:
+   ```bash
+   polygon-agent wallet --address
+   ```
 
-### Using the Polygon Agent CLI
+## Supported Tokens
+
+| Token | Symbol | Network | Address |
+|-------|--------|---------|---------|
+| USDC | USDC | Polygon | 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 |
+| MATIC | MATIC | Polygon (native) | - |
+
+## Invoice Creation
+
+### Invoice Data Structure
+
+```json
+{
+  "mission_id": "MISSION-20260312-001",
+  "client": {
+    "name": "Acme Corp",
+    "wallet": "0x..."
+  },
+  "items": [
+    {
+      "description": "SEO Audit - Standard Tier",
+      "amount": 29
+    }
+  ],
+  "total_usdc": 29,
+  "payment_address": "0xYourWalletAddress...",
+  "status": "pending",
+  "created_at": "2026-03-12"
+}
+```
+
+### Creating an Invoice
+
+1. Get your wallet address:
+   ```bash
+   polygon-agent wallet --address
+   ```
+
+2. Create invoice with payment details:
+   - Include your Polygon wallet address
+   - Specify amount in USDC
+   - Set clear payment terms
+
+3. Send invoice to client:
+```
+Subject: Invoice #001 - SEO Audit
+
+Dear {client_name},
+
+Thank you for your business! Please find the invoice details below:
+
+Service: SEO Audit - Standard Tier
+Amount: 29 USDC
+
+Payment Address: 0x....................................
+Network: Polygon (MATIC)
+
+You can pay using:
+- Phantom Wallet
+- MetaMask
+- Any Polygon-compatible wallet
+
+Once payment is confirmed on-chain, I will deliver the work immediately.
+
+Thank you!
+```
+
+## Payment Tracking
+
+### Check Payment Status
 
 ```bash
-# Set up wallet (first time only)
-polygon-agent setup
+# Check your balance
+polygon-agent balances
+```
 
-# Get wallet address
+### On-Chain Confirmation
+
+Payment is confirmed when:
+1. Transaction shows on Polygon scanner
+2. Balance increases by expected amount
+
+Example scanner: https://polygonscan.com/address/YOUR_WALLET
+
+### Ledger Entry Format
+
+Log every invoice event:
+
+```json
+{"ts":"2026-03-12T12:00:00Z","event":"invoice_created","mission_id":"MISSION-20260312-001","amount":29,"currency":"USDC","status":"pending"}
+{"ts":"2026-03-12T12:30:00Z","event":"payment_received","mission_id":"MISSION-20260312-001","amount":29,"currency":"USDC","tx_hash":"0x...","confirmed":true}
+```
+
+## Payment Reminder Flow
+
+### Day 0: Invoice Sent
+
+```
+Subject: Invoice #{number} - Payment Request
+
+Hi {name},
+
+Please find your invoice for {service}.
+
+Amount: {amount} USDC
+Payment Address: {your_wallet_address}
+Network: Polygon
+
+Pay using any Polygon wallet (Phantom, MetaMask, etc.)
+
+Thank you for your business!
+```
+
+### Day 3: Gentle Reminder
+
+Only send if payment not received.
+
+```
+Subject: Friendly reminder: Invoice #{number}
+
+Hi {name},
+
+Just a quick reminder that invoice #{number} for {amount} USDC is still pending.
+
+Payment Address: {wallet_address}
+Network: Polygon
+
+If you have already sent payment, please ignore this message.
+
+Thanks!
+```
+
+### Day 7: Follow-up
+
+```
+Subject: Invoice #{number} - Payment reminder
+
+Hi {name},
+
+This is a follow-up regarding invoice #{number} for {amount} USDC.
+
+Please send payment to:
+{wallet_address}
+Network: Polygon
+
+If there are any issues with payment, please let me know.
+
+Best regards
+```
+
+### Day 14: Final Notice
+
+```
+Subject: Final notice: Invoice #{number}
+
+Hi {name},
+
+This is our final reminder regarding invoice #{number} for {amount} USDC, which is now 14 days past due.
+
+Please complete payment at your earliest convenience:
+{wallet_address}
+Network: Polygon
+
+If we do not receive payment or hear from you within 48 hours, we may need to pause any ongoing services.
+
+Regards,
+```
+
+### Reminder Rules
+
+1. Never send more than 1 reminder per day
+2. Stop reminders once payment is confirmed on-chain
+3. If client responds, handle personally
+4. After Day 14 with no response, escalate to operator
+
+## Receiving Payments
+
+### Getting Your Address
+
+```bash
 polygon-agent wallet --address
+```
 
-# Check all balances
+### Sharing with Clients
+
+Send clients your:
+- Wallet address
+- Network: Polygon (not Ethereum!)
+- Token: USDC
+
+### Confirming Payment
+
+```bash
+# Check balance
 polygon-agent balances
 
+# View recent transactions
+polygon-agent transaction-history
+```
+
+## Sending Payments (Payouts)
+
+If you need to pay others:
+
+```bash
 # Send USDC
 polygon-agent send-token --symbol USDC --amount 10 --to 0x...
 
 # Send MATIC
 polygon-agent send-native --amount 1 --to 0x...
-
-# Swap USDC to MATIC
-polygon-agent swap --from USDC --to MATIC --amount 10
-
-# Fund wallet (via Trails)
-polygon-agent fund
-
-# Transfer USDC
-node scripts/crypto-ops.js transfer \
-  --to 0x... \
-  --amount 10 \
-  --currency usdc
-
-# Transfer ETH
-node crypto-ops.js transfer \
-  --to 0x... \
-  --amount 0.01 \
-  --currency eth
-
-# Get testnet ETH (Base Sepolia)
-node scripts/crypto-ops.js fund-wallet
 ```
 
-### Supported Networks
+## Token Swaps
 
-| Network | Chain ID | Status |
-|---------|----------|--------|
-| base-sepolia | 84532 | ✅ Testnet |
-| base | 8453 | ✅ Mainnet |
-| ethereum | 1 | ✅ Mainnet |
-
-### Supported Tokens
-
-| Token | Address (Base) | Decimals |
-|-------|----------------|----------|
-| ETH | native | 18 |
-| USDC | 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 | 6 |
-
-## Payment Flow
-
-### Crypto Invoice Creation
-
-1. Create a crypto wallet for your agent
-2. Generate a payment address
-3. Send invoice to client with crypto amount in USDC
-4. Monitor for incoming transfers
-5. Confirm payment on-chain
-
-### Payment Confirmation
+Need MATIC for gas? Swap USDC:
 
 ```bash
-# Check balance to confirm payment
-node scripts/crypto-ops.js get-balance
+polygon-agent swap --from USDC --to MATIC --amount 10
 ```
 
 ## Multi-Currency Support
 
-CashClaw now supports both fiat (Stripe) and crypto (CDP) payments:
+| Currency | Code | Example |
+|----------|------|---------|
+| US Dollar (USDC) | USDC | 29 USDC |
+| MATIC | MATIC | 50 MATIC |
 
-| Payment Type | Provider | Use Case |
-|-------------|----------|----------|
-| Fiat | Stripe | Traditional clients |
-| Crypto | CDP CDP | Web3 clients, international |
+Always confirm with client which token they prefer for payment.
 
-## Environment Configuration
+## Error Handling
 
-Add to `~/.cashclaw/config.json`:
+| Issue | Solution |
+|-------|----------|
+| Client sent to wrong network | Ask them to resend from Polygon network |
+| Client sent wrong token | Request correct token or convert manually |
+| Transaction pending | Wait for on-chain confirmation (usually ~2-3 sec) |
+| Low balance for gas | Use `polygon-agent swap` to get MATIC |
 
-```json
-{
-  "stripe": {
-    "secret_key": "sk_..."
-  },
-  "cdp": {
-    "api_key_name": "your_key_name",
-    "api_key_secret": "your_key_secret"
-  },
-  "cryptoWallet": {
-    "address": "0x...",
-    "network": "base-sepolia"
-  }
-}
+## Example Commands
+
+```bash
+# Get your payment address
+polygon-agent wallet --address
+
+# Check incoming payments
+polygon-agent balances
+
+# Send payment to someone
+polygon-agent send-token --symbol USDC --amount 5 --to 0x...
+
+# Swap tokens
+polygon-agent swap --from USDC --to MATIC --amount 10
 ```
+
+## Integration with CashClaw Core
+
+When a mission reaches DELIVER stage:
+
+1. Calculate final amount from mission details
+2. Generate invoice with your Polygon address
+3. Send to client via email/DM
+4. Monitor for payment via `polygon-agent balances`
+5. Once confirmed, mark mission complete
+6. Log in ledger
