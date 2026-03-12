@@ -393,3 +393,113 @@ cashclaw invoice --remind --overdue
 # Process a refund
 cashclaw invoice --refund --invoice "in_xxxxx" --amount 29
 ```
+
+---
+
+# Crypto Payments (Coinbase AgentKit)
+
+CashClaw supports crypto payments via the Coinbase Developer Platform (CDP) AgentKit. This enables agents to:
+- Create crypto wallets
+- Receive USDC and ETH payments
+- Transfer funds to any address
+- Fund testnet wallets for development
+
+## Prerequisites
+
+1. **CDP API Key** from https://docs.cdp.coinbase.com/
+2. Set environment variables:
+   ```bash
+   export CDP_API_KEY_NAME=your_key_name
+   export CDP_API_KEY_SECRET=your_key_secret
+   ```
+
+## Crypto Operations
+
+### Using the crypto-ops.js Script
+
+```bash
+# Create a new crypto wallet
+node scripts/crypto-ops.js create-wallet
+
+# Get your wallet address
+node scripts/crypto-ops.js get-address
+
+# Check wallet balance
+node scripts/crypto-ops.js get-balance
+
+# Transfer USDC
+node scripts/crypto-ops.js transfer \
+  --to 0x... \
+  --amount 10 \
+  --currency usdc
+
+# Transfer ETH
+node crypto-ops.js transfer \
+  --to 0x... \
+  --amount 0.01 \
+  --currency eth
+
+# Get testnet ETH (Base Sepolia)
+node scripts/crypto-ops.js fund-wallet
+```
+
+### Supported Networks
+
+| Network | Chain ID | Status |
+|---------|----------|--------|
+| base-sepolia | 84532 | ✅ Testnet |
+| base | 8453 | ✅ Mainnet |
+| ethereum | 1 | ✅ Mainnet |
+
+### Supported Tokens
+
+| Token | Address (Base) | Decimals |
+|-------|----------------|----------|
+| ETH | native | 18 |
+| USDC | 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 | 6 |
+
+## Payment Flow
+
+### Crypto Invoice Creation
+
+1. Create a crypto wallet for your agent
+2. Generate a payment address
+3. Send invoice to client with crypto amount in USDC
+4. Monitor for incoming transfers
+5. Confirm payment on-chain
+
+### Payment Confirmation
+
+```bash
+# Check balance to confirm payment
+node scripts/crypto-ops.js get-balance
+```
+
+## Multi-Currency Support
+
+CashClaw now supports both fiat (Stripe) and crypto (CDP) payments:
+
+| Payment Type | Provider | Use Case |
+|-------------|----------|----------|
+| Fiat | Stripe | Traditional clients |
+| Crypto | Coinbase CDP | Web3 clients, international |
+
+## Environment Configuration
+
+Add to `~/.cashclaw/config.json`:
+
+```json
+{
+  "stripe": {
+    "secret_key": "sk_..."
+  },
+  "cdp": {
+    "api_key_name": "your_key_name",
+    "api_key_secret": "your_key_secret"
+  },
+  "cryptoWallet": {
+    "address": "0x...",
+    "network": "base-sepolia"
+  }
+}
+```
