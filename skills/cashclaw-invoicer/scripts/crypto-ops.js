@@ -97,33 +97,63 @@ async function getBalances(walletAddress) {
 }
 
 /**
- * Wait for payment - monitors wallet until expected amount received
+ * Wait for payment - monitors wallet for DELTA in balance
+ * CRITICAL: Calculates the change in balance, not total balance
+ * This prevents false positives when wallet already has funds
  */
 async function waitForPayment(walletAddress, expectedUsdc, pollIntervalMs = 10000, timeoutMs = 300000) {
+  // Step 1: Get initial balance (baseline)
+  const initialBalanceRaw = await getUsdcBalance(walletAddress);
+  
+  if (initialBalanceRaw === null) {
+    console.error('❌ Failed to read initial balance. Check RPC connection.');
+    return { received: false, balance: 0, error: 'RPC error' };
+  }
+  
+  const initialBalanceUsdc = Number(initialBalanceRaw) / 1e6;
+  const targetBalanceUsdc = initialBalanceUsdc + expectedUsdc;
+  
   console.log(`\n⏳ Waiting for payment of ${expectedUsdc} USDC...`);
   console.log(`👛 Monitoring: ${walletAddress}`);
+  console.log(`📊 Starting Balance: ${initialBalanceUsdc.toFixed(6)} USDC`);
+  console.log(`🎯 Target Balance:   ${targetBalanceUsdc.toFixed(6)} USDC`);
   console.log(`⏱️  Checking every ${pollIntervalMs/1000}s for up to ${timeoutMs/1000}s\n`);
-
+  
   const startTime = Date.now();
   
   while (Date.now() - startTime < timeoutMs) {
-    const balance = await getUsdcBalance(walletAddress);
+    const currentBalanceRaw = await getUsdcBalance(walletAddress);
     
-    if (balance !== null) {
-      const balanceUsdc = Number(balance) / 1e6;
-      console.log(`[${new Date().toISOString()}] Balance: ${balanceUsdc} USDC`);
+    if (currentBalanceRaw !== null) {
+      const currentBalanceUsdc = Number(currentBalanceRaw) / 1e6;
+      const delta = currentBalanceUsdc - initialBalanceUsdc;
       
-      if (balanceUsdc >= expectedUsdc) {
-        console.log(`\n✅ PAYMENT RECEIVED! ${balanceUsdc} USDC\n`);
-        return { received: true, balance: balanceUsdc };
+      console.log(`[${new Date().toISOString()}] Balance: ${currentBalanceUsdc.toFixed(6)} USDC | Delta: +${delta.toFixed(6)} USDC`);
+      
+      // Check if balance INCREASED by expected amount (not just >= expected)
+      if (currentBalanceUsdc >= targetBalanceUsdc) {
+        console.log(`\n✅ PAYMENT RECEIVED! +${delta.toFixed(6)} USDC\n`);
+        return { 
+          received: true, 
+          balance: currentBalanceUsdc,
+          initialBalance: initialBalanceUsdc,
+          delta: delta
+        };
       }
+    } else {
+      console.log(`[${new Date().toISOString()}] ⚠️ Failed to read balance, retrying...`);
     }
     
     await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
   }
 
   console.log(`\n❌ Payment timeout after ${timeoutMs/1000}s\n`);
-  return { received: false, balance: 0 };
+  return { 
+    received: false, 
+    balance: 0,
+    initialBalance: initialBalanceUsdc,
+    targetBalance: targetBalanceUsdc
+  };
 }
 
 /**
