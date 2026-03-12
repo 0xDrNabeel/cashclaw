@@ -396,36 +396,52 @@ cashclaw invoice --refund --invoice "in_xxxxx" --amount 29
 
 ---
 
-# Crypto Payments (Coinbase AgentKit)
+# Crypto Payments (Polygon Agent CLI)
 
-CashClaw supports crypto payments via the Coinbase Developer Platform (CDP) AgentKit. This enables agents to:
-- Create crypto wallets
-- Receive USDC and ETH payments
+CashClaw supports crypto payments via the Polygon Agent CLI. This enables agents to:
+- Create crypto wallets (EOA)
+- Receive USDC and MATIC payments
 - Transfer funds to any address
-- Fund testnet wallets for development
+- Swap tokens on DEXs
+- Register ERC-8004 agent identity
 
 ## Prerequisites
 
-1. **CDP API Key** from https://docs.cdp.coinbase.com/
-2. Set environment variables:
+1. **Polygon Agent CLI** installed:
    ```bash
-   export CDP_API_KEY_NAME=your_key_name
-   export CDP_API_KEY_SECRET=your_key_secret
+   npm install -g @polygonlabs/agent-cli
+   ```
+
+2. **Set up wallet** (one command!):
+   ```bash
+   polygon-agent setup
    ```
 
 ## Crypto Operations
 
-### Using the crypto-ops.js Script
+### Using the Polygon Agent CLI
 
 ```bash
-# Create a new crypto wallet
-node scripts/crypto-ops.js create-wallet
+# Set up wallet (first time only)
+polygon-agent setup
 
-# Get your wallet address
-node scripts/crypto-ops.js get-address
+# Get wallet address
+polygon-agent wallet --address
 
-# Check wallet balance
-node scripts/crypto-ops.js get-balance
+# Check all balances
+polygon-agent balances
+
+# Send USDC
+polygon-agent send-token --symbol USDC --amount 10 --to 0x...
+
+# Send MATIC
+polygon-agent send-native --amount 1 --to 0x...
+
+# Swap USDC to MATIC
+polygon-agent swap --from USDC --to MATIC --amount 10
+
+# Fund wallet (via Trails)
+polygon-agent fund
 
 # Transfer USDC
 node scripts/crypto-ops.js transfer \
@@ -482,7 +498,7 @@ CashClaw now supports both fiat (Stripe) and crypto (CDP) payments:
 | Payment Type | Provider | Use Case |
 |-------------|----------|----------|
 | Fiat | Stripe | Traditional clients |
-| Crypto | Coinbase CDP | Web3 clients, international |
+| Crypto | CDP CDP | Web3 clients, international |
 
 ## Environment Configuration
 

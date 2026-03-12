@@ -104,7 +104,7 @@ cashclaw audit --url "https://your-client.com" --tier standard
 | **CashClaw Skills** | 7 specialized skill packs (SEO, content, leads, invoicing, etc.). |
 | **CashClaw Engine** | The `cashclaw-core` skill that orchestrates the mission lifecycle. |
 | **Stripe** | Payment processing. Invoices, payment links, subscriptions, refunds. |
-| **Coinbase CDP** | Crypto payments. USDC transfers, wallet creation, on-chain transactions. |
+| **Polygon** | Crypto payments. USDC transfers, wallet creation, on-chain transactions. |
 | **HYRVEai** | Optional marketplace where clients discover and hire CashClaw agents. |
 
 ## Payment Options
@@ -119,31 +119,30 @@ Traditional payments via credit card, bank transfer.
 cashclaw config --stripe-key sk_live_...
 ```
 
-### 2. Crypto (Coinbase CDP) - NEW!
-Accept USDC, ETH payments directly to your wallet. No middleman.
+### 2. Crypto (Polygon) - NEW!
+Accept USDC, MATIC payments directly to your wallet. Low fees, fast!
 
 ```bash
-# Get your CDP API key at https://docs.cdp.coinbase.com/
-export CDP_API_KEY_NAME=your_key_name
-export CDP_API_KEY_SECRET=your_key_secret
+# Install Polygon Agent CLI
+npm install -g @polygonlabs/agent-cli
 
-# Create a crypto wallet
-node skills/cashclaw-invoicer/scripts/crypto-ops.js create-wallet
+# Set up wallet (one command!)
+polygon-agent setup
 
 # Check balance
-node skills/cashclaw-invoicer/scripts/crypto-ops.js get-balance
+polygon-agent balances
 
-# Transfer USDC to client
-node skills/cashclaw-invoicer/scripts/crypto-ops.js transfer \
-  --to 0x... \
-  --amount 10 \
-  --currency usdc
+# Send USDC
+polygon-agent send-token --symbol USDC --amount 10 --to 0x...
+
+# Swap tokens
+polygon-agent swap --from USDC --to MATIC --amount 10
 ```
 
 **Benefits of Crypto:**
-- ⚡ Instant settlements
+- ⚡ Instant settlements (2-3 seconds)
 - 🌎 Global (no borders)
-- 💰 Lower fees than Stripe
+- 💰 Very low fees (~$0.01 per tx)
 - 🔒 Non-custodial (you control the wallet)
 
 ## Available Services
@@ -233,11 +232,12 @@ cashclaw invoice --list --status unpaid
 cashclaw invoice --remind --overdue
 cashclaw invoice --refund --invoice "in_xxxxx"
 
-# Crypto Payments (Coinbase CDP)
-node skills/cashclaw-invoicer/scripts/crypto-ops.js create-wallet
-node skills/cashclaw-invoicer/scripts/crypto-ops.js get-address
-node skills/cashclaw-invoicer/scripts/crypto-ops.js get-balance
-node skills/cashclaw-invoicer/scripts/crypto-ops.js transfer --to 0x... --amount 1 --currency usdc
+# Crypto Payments (Polygon)
+polygon-agent setup
+polygon-agent wallet
+polygon-agent balances
+polygon-agent send-token --symbol USDC --amount 1 --to 0x...
+polygon-agent swap --from USDC --to MATIC --amount 1
 
 # Configuration
 cashclaw config                  # Show current config
