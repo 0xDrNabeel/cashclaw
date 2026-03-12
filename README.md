@@ -6,23 +6,21 @@
   <a href="#what-is-cashclaw">What is CashClaw?</a> &middot;
   <a href="#quick-start">Quick Start</a> &middot;
   <a href="#how-it-works">How It Works</a> &middot;
-  <a href="#payment-options">Payment Options</a> &middot;
+  <a href="#crypto-payments">Crypto Payments</a> &middot;
   <a href="#available-services">Services</a> &middot;
   <a href="#dashboard">Dashboard</a> &middot;
-  <a href="#commands">Commands</a> &middot;
-  <a href="#hyrveai-integration">HYRVEai</a>
+  <a href="#commands">Commands</a>
 </p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/cashclaw"><img src="https://img.shields.io/npm/v/cashclaw?color=crimson&label=npm" alt="npm version" /></a>
-  <a href="https://github.com/ertugrulakben/cashclaw/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license" /></a>
-  <a href="https://github.com/ertugrulakben/cashclaw/stargazers"><img src="https://img.shields.io/github/stars/ertugrulakben/cashclaw?style=social" alt="stars" /></a>
-  <a href="https://hyrveai.com"><img src="https://img.shields.io/badge/powered%20by-HYRVEai-ff6b35" alt="HYRVEai" /></a>
+  <a href="https://github.com/0xDrNabeel/cashclaw/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license" /></a>
+  <a href="https://github.com/0xDrNabeel/cashclaw/stargazers"><img src="https://img.shields.io/github/stars/0xDrNabeel/cashclaw?style=social" alt="stars" /></a>
 </p>
 
 ---
 
-> *"I deployed CashClaw on Friday. By Monday, my agent had completed 12 missions and earned $847."*
+> *"I deployed CashClaw on Friday. By Monday, my agent had completed 12 missions and earned $847 in USDC."*
 >
 > -- Early beta tester
 
@@ -30,120 +28,138 @@
 
 ## What is CashClaw?
 
-CashClaw is a set of **OpenClaw skills** that turn your AI agent into a freelance business operator.
+CashClaw is a set of **OpenClaw skills** that turn your AI agent into a freelance business operator — powered by **crypto payments**.
 
-Your agent wakes up. Checks the pipeline. Picks up a client request. Runs an SEO audit. Writes a blog post. Generates 50 qualified leads. Creates a Stripe invoice. Sends a payment link. Follows up three days later. Collects the money.
+Your agent wakes up. Checks the pipeline. Picks up a client request. Runs an SEO audit. Writes a blog post. Generates 50 qualified leads. Creates a crypto invoice. Waits for on-chain payment. Delivers the work. Collects the money.
 
 **You sleep. CashClaw works.**
 
-It is not a framework. It is not a SaaS dashboard. It is a skill pack that plugs into any OpenClaw-compatible agent and gives it the ability to sell, deliver, and collect payment for digital services -- autonomously.
+It is not a framework. It is not a SaaS dashboard. It is a skill pack that plugs into any OpenClaw-compatible agent and gives it the ability to sell, deliver, and collect payment for digital services — autonomously.
 
 ```
-No employees. No overhead. No invoicing headaches.
-Just an agent, a Stripe account, and CashClaw.
+No employees. No overhead. No banking restrictions.
+Just an agent, a Polygon wallet, and CashClaw.
 ```
 
 ## Quick Start
 
 ```bash
-npx cashclaw init
-```
-
-That is it. CashClaw will:
-
-1. Create your `~/.cashclaw/` workspace
-2. Set up the mission pipeline
-3. Connect to Stripe (optional, you can add it later)
-4. Install all 7 skills into your OpenClaw agent
-5. Print your first dashboard
-
-```bash
-# Or install globally
+# Install CashClaw
 npm install -g cashclaw
 
-# Initialize workspace
+# Initialize
 cashclaw init
 
-# Check status
-cashclaw status
-
-# Run your first audit
-cashclaw audit --url "https://your-client.com" --tier standard
+# Set your Polygon wallet address
+# Edit ~/.cashclaw/config.json:
+{
+  "payment": {
+    "address": "0xYourPolygonAddress..."
+  }
+}
 ```
+
+That's it! Your agent is now ready to:
+- Receive missions
+- Do the work (SEO, content, leads)
+- Generate crypto invoices
+- Verify payments on-chain
+- Deliver and get paid in USDC
 
 ## How It Works
 
 ```
 +------------------+     +---------------------+     +------------------+
-|                  |     |                     |     |                  |
-|    OpenClaw      |---->|   CashClaw Skills   |---->|  CashClaw Engine |
-|    (Your Agent)  |     |   (7 skill packs)   |     |  (Orchestrator)  |
-|                  |     |                     |     |                  |
+|                  |     |   CashClaw Skills  |     |   Crypto Engine  |
+|    OpenClaw      |---->|   (7 skill packs) |---->|   (viem + RPC)   |
+|    (Your Agent)  |     |                    |     |                  |
 +------------------+     +---------------------+     +--------+---------+
                                                               |
                                                               v
                                                      +--------+---------+
                                                      |                  |
-                                                     |     Stripe       |
-                                                     |   (Payments)     |
-                                                     |                  |
-                                                     +--------+---------+
-                                                              |
-                                                              v
-                                                     +--------+---------+
-                                                     |                  |
-                                                     |    HYRVEai      |
-                                                     |  (Marketplace)   |
+                                                     |    Polygon       |
+                                                     |  (USDC Payments) |
                                                      |                  |
                                                      +------------------+
 ```
 
 | Layer | What It Does |
 |-------|-------------|
-| **OpenClaw** | Your AI agent runtime. Reads SKILL.md files, executes instructions. |
-| **CashClaw Skills** | 7 specialized skill packs (SEO, content, leads, invoicing, etc.). |
-| **CashClaw Engine** | The `cashclaw-core` skill that orchestrates the mission lifecycle. |
-| **Stripe** | Payment processing. Invoices, payment links, subscriptions, refunds. |
-| **Polygon** | Crypto payments. USDC transfers, wallet creation, on-chain transactions. |
-| **HYRVEai** | Optional marketplace where clients discover and hire CashClaw agents. |
+| **OpenClaw** | Your AI agent runtime |
+| **CashClaw Skills** | 7 specialized skill packs (SEO, content, leads, etc.) |
+| **Crypto Engine** | On-chain payment verification via viem |
+| **Polygon** | Accept USDC payments directly to your wallet |
 
-## Payment Options
+## Crypto Payments
 
-CashClaw supports **two payment methods**:
+CashClaw uses **Polygon** blockchain for payments. No banks, no middleman, no restrictions.
 
-### 1. Fiat (Stripe) - Default
-Traditional payments via credit card, bank transfer.
+### Why Polygon?
 
+- ⚡ **Fast** - ~2 second block time
+- 💰 **Cheap** - ~$0.01 transaction fees
+- 🌎 **Global** - Anyone can pay from anywhere
+- 🔒 **Secure** - Non-custodial (you control your wallet)
+- ✅ **No restrictions** - Works in Iraq, Iran, sanctioned countries
+
+### Supported Tokens
+
+| Token | Address | Network |
+|-------|---------|---------|
+| USDC | 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359 | Polygon |
+| MATIC | (native) | Polygon |
+
+### Setting Up
+
+1. **Create a Polygon wallet** (MetaMask, Phantom set to Polygon, etc.)
+
+2. **Get your address** (starts with 0x...)
+
+3. **Configure CashClaw:**
 ```bash
-# Set up Stripe
-cashclaw config --stripe-key sk_live_...
+# Edit ~/.cashclaw/config.json
+{
+  "payment": {
+    "address": "0xYourPolygonAddress...",
+    "network": "polygon"
+  }
+}
 ```
 
-### 2. Crypto (Polygon) - NEW!
-Accept USDC, MATIC payments directly to your wallet. Low fees, fast!
+4. **(Optional) Get a free RPC** for better reliability:
+   - https://www.alchemy.com/
+   - https://www.quicknode.com/
+   - https://www.infura.io/
 
 ```bash
-# Install Polygon Agent CLI
-npm install -g @polygonlabs/agent-cli
-
-# Set up wallet (one command!)
-polygon-agent setup
-
-# Check balance
-polygon-agent balances
-
-# Send USDC
-polygon-agent send-token --symbol USDC --amount 10 --to 0x...
-
-# Swap tokens
-polygon-agent swap --from USDC --to MATIC --amount 10
+export POLYGON_RPC=your_rpc_url
 ```
 
-**Benefits of Crypto:**
-- ⚡ Instant settlements (2-3 seconds)
-- 🌎 Global (no borders)
-- 💰 Very low fees (~$0.01 per tx)
-- 🔒 Non-custodial (you control the wallet)
+### Checking Payments
+
+```bash
+# Check wallet balance
+node skills/cashclaw-invoicer/scripts/crypto-ops.js balance --address 0x...
+
+# Wait for payment
+node skills/cashclaw-invoicer/scripts/crypto-ops.js wait-payment --address 0x... --amount 29
+```
+
+### The Payment Flow
+
+```
+1. Client requests service
+2. Agent creates mission → QUOTE stage
+3. Agent generates invoice with Polygon address
+4. Agent SENDS invoice to client
+5. Agent MONITORS wallet for payment (on-chain)
+6. Once payment confirmed → DELIVER stage
+7. Agent hands over work
+8. Payment complete!
+```
+
+**Critical: Payment MUST be verified on-chain BEFORE delivering work!**
 
 ## Available Services
 
@@ -164,7 +180,7 @@ Every service has transparent, fixed pricing. No hourly rates. No surprises.
 | Social Media (3 platforms) | `cashclaw-social-media` | -- | $19/wk | -- |
 | Social Media (Full) | `cashclaw-social-media` | -- | -- | $49/mo |
 
-**Custom packages available.** Combine services or request enterprise pricing.
+All prices in USDC. Payment via Polygon.
 
 ## Dashboard
 
@@ -183,16 +199,19 @@ cashclaw status
   This Month    $847    | 31 missions completed
   All Time    $2,340    | 84 missions completed
 
+  Wallet Balance
+  --------------
+  USDC:  847.00
+  MATIC: 125.50
+
   Active Missions
   ---------------
-  MISSION-20260223-014  SEO Audit (Pro)       EXECUTE    $59
-  MISSION-20260223-015  Lead Gen (50)         DELIVER    $15
-  MISSION-20260223-016  Blog Post (1500w)     QUOTE      $12
+  MISSION-20260312-014  SEO Audit (Pro)       QUOTE     $59
+  MISSION-20260312-015  Lead Gen (50)        DELIVER   $15
 
   Pending Payments
   ----------------
-  INV-0042  $29   Due Feb 28   client@acme.com
-  INV-0043  $49   Due Mar 01   hello@startup.io
+  INV-0012  $29   Waiting...   0x1234...abc
 ```
 
 ## Commands
@@ -204,74 +223,13 @@ cashclaw status                  # Show dashboard
 cashclaw missions                # List all missions
 cashclaw mission <id>            # Show mission details
 
-# SEO
-cashclaw audit --url <URL>       # Run SEO audit
-cashclaw audit --url <URL> --tier pro --output report.md
-
-# Content
-cashclaw content --type blog --words 1500 --keyword "topic"
-cashclaw content --type newsletter --topic "monthly update"
-cashclaw content --type social --platform instagram --posts 5
-
-# Leads
-cashclaw leads --icp "saas,10-50,US" --count 50
-cashclaw leads --query "ecommerce startups" --output leads.json
-
-# WhatsApp
-cashclaw whatsapp setup --config profile.yaml
-cashclaw whatsapp templates --count 10 --industry "restaurant"
-
-# Social Media
-cashclaw social --platform linkedin --type weekly
-cashclaw social --platforms all --type monthly
-cashclaw social analytics --period "2026-02"
-
-# Invoicing (Stripe)
-cashclaw invoice --client "email" --amount 29 --service "SEO Audit"
-cashclaw invoice --list --status unpaid
-cashclaw invoice --remind --overdue
-cashclaw invoice --refund --invoice "in_xxxxx"
-
-# Crypto Payments (Polygon)
-polygon-agent setup
-polygon-agent wallet
-polygon-agent balances
-polygon-agent send-token --symbol USDC --amount 1 --to 0x...
-polygon-agent swap --from USDC --to MATIC --amount 1
+# Crypto
+cashclaw invoice --amount 29     # Generate invoice
+# (Use crypto-ops.js for balance checks)
 
 # Configuration
 cashclaw config                  # Show current config
-cashclaw config --stripe-key     # Set Stripe API key
-cashclaw config --currency usd   # Set default currency
 ```
-
-## HYRVEai Integration
-
-[HYRVEai](https://hyrveai.com) is the marketplace where CashClaw agents find clients.
-
-```bash
-# Connect to HYRVEai
-cashclaw hyrve connect --api-key <YOUR_KEY>
-
-# List available gigs
-cashclaw hyrve gigs
-
-# Accept a gig
-cashclaw hyrve accept --gig <GIG_ID>
-
-# Submit completed work
-cashclaw hyrve deliver --gig <GIG_ID> --files deliverables/
-```
-
-When connected to HYRVEai, your agent automatically:
-
-1. **Receives** new mission requests from the marketplace.
-2. **Quotes** based on your configured pricing.
-3. **Executes** using CashClaw skills.
-4. **Delivers** through the HYRVEai platform.
-5. **Gets paid** via HYRVEai's escrow system.
-
-No cold outreach needed. Clients come to you.
 
 ## Project Structure
 
@@ -281,42 +239,51 @@ cashclaw/
   src/                           # Core engine source
   skills/
     cashclaw-core/               # Business orchestration brain
-    cashclaw-seo-auditor/        # SEO audit skill + scripts
+    cashclaw-seo-auditor/        # SEO audit skill
     cashclaw-content-writer/     # Content creation skill
-    cashclaw-lead-generator/     # Lead research skill + scripts
+    cashclaw-lead-generator/     # Lead research skill
     cashclaw-whatsapp-manager/   # WhatsApp automation skill
-    cashclaw-social-media/       # Social media management skill
-    cashclaw-invoicer/           # Stripe payment skill + scripts
-  templates/                     # Message and report templates
-  missions/                      # Example mission files
-  tests/                         # Test suite
-  package.json
-  LICENSE
-  README.md
+    cashclaw-social-media/       # Social media skill
+    cashclaw-invoicer/          # Crypto payment skill + viem
+  templates/                     # Message templates
+  missions/                     # Example missions
+  tests/                        # Test suite
 ```
 
-## Built By
+## Tech Stack
 
-Built by [Ertugrul Akben](https://github.com/ertugrulakben) and the team at [HYRVEai](https://hyrveai.com).
+- **Runtime**: OpenClaw
+- **Language**: JavaScript/Node.js
+- **Blockchain**: Polygon
+- **Crypto**: viem + public RPC
+- **Payments**: USDC (native on Polygon)
 
-CashClaw exists because AI agents should not just answer questions -- they should run businesses.
+## Why Crypto?
+
+| Feature | Crypto (CashClaw) | Traditional (Stripe) |
+|---------|-------------------|---------------------|
+| Setup time | 5 minutes | 1-2 weeks |
+| Global | ✅ Anyone, anywhere | ❌ Many restrictions |
+| Fees | ~$0.01 | 2.9% + 30¢ |
+| Payout time | Instant | 2-7 days |
+| Iraq/Iran | ✅ Works | ❌ Blocked |
+| Control | 100% yours | Middleman |
 
 ## Contributing
 
-CashClaw is open source. PRs are welcome.
+CashClaw is open source. PRs welcome!
 
 1. Fork the repo
-2. Create a feature branch (`git checkout -b feature/new-skill`)
-3. Write your skill following the OpenClaw SKILL.md format
-4. Add tests
-5. Submit a PR
+2. Create a feature branch
+3. Write your skill
+4. Submit a PR
 
 ## License
 
-[MIT](LICENSE) -- Use it, fork it, make money with it.
+[MIT](LICENSE)
 
 ---
 
 <p align="center">
-  <sub>Stop prompting. Start profiting.</sub>
+  <sub>Stop prompting. Start earning in USDC.</sub>
 </p>

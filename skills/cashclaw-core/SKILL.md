@@ -84,9 +84,9 @@ When client confirms:
 
 1. Update mission status to `accepted`.
 2. Record acceptance timestamp.
-3. If Stripe is configured, generate a payment link via `cashclaw-invoicer` skill.
+3. If Polygon is configured, generate a payment link via `cashclaw-invoicer` skill.
 4. Send payment link to client.
-5. If no Stripe, proceed on trust and invoice after delivery.
+5. If no Polygon, proceed on trust and invoice after delivery.
 
 ### Stage 4: EXECUTE
 
@@ -176,7 +176,7 @@ Follow these rules for EVERY client interaction:
 
 ```
 ~/.cashclaw/
-  config.json          - API keys, Stripe config, preferences
+  config.json          - API keys, Polygon config, preferences
   ledger.jsonl         - Append-only log of all events
   revenue.jsonl        - Completed mission revenue records
   dashboard.json       - Aggregated stats for dashboard display
@@ -231,7 +231,7 @@ Delegate to these skills based on the service requested:
 | `cashclaw-lead-generator` | B2B lead research and qualification | $9 - $25 |
 | `cashclaw-whatsapp-manager` | WhatsApp Business setup and automation | $19 - $49/mo |
 | `cashclaw-social-media` | Content calendars, analytics, posting | $9 - $49 |
-| `cashclaw-invoicer` | Stripe invoices, payment links, reminders | Internal |
+| `cashclaw-invoicer` | Polygon invoices, payment links, reminders | Internal |
 
 ## Error Handling
 
