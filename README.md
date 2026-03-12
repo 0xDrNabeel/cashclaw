@@ -6,6 +6,7 @@
   <a href="#what-is-cashclaw">What is CashClaw?</a> &middot;
   <a href="#quick-start">Quick Start</a> &middot;
   <a href="#how-it-works">How It Works</a> &middot;
+  <a href="#payment-options">Payment Options</a> &middot;
   <a href="#available-services">Services</a> &middot;
   <a href="#dashboard">Dashboard</a> &middot;
   <a href="#commands">Commands</a> &middot;
@@ -103,7 +104,47 @@ cashclaw audit --url "https://your-client.com" --tier standard
 | **CashClaw Skills** | 7 specialized skill packs (SEO, content, leads, invoicing, etc.). |
 | **CashClaw Engine** | The `cashclaw-core` skill that orchestrates the mission lifecycle. |
 | **Stripe** | Payment processing. Invoices, payment links, subscriptions, refunds. |
+| **Coinbase CDP** | Crypto payments. USDC transfers, wallet creation, on-chain transactions. |
 | **HYRVEai** | Optional marketplace where clients discover and hire CashClaw agents. |
+
+## Payment Options
+
+CashClaw supports **two payment methods**:
+
+### 1. Fiat (Stripe) - Default
+Traditional payments via credit card, bank transfer.
+
+```bash
+# Set up Stripe
+cashclaw config --stripe-key sk_live_...
+```
+
+### 2. Crypto (Coinbase CDP) - NEW!
+Accept USDC, ETH payments directly to your wallet. No middleman.
+
+```bash
+# Get your CDP API key at https://docs.cdp.coinbase.com/
+export CDP_API_KEY_NAME=your_key_name
+export CDP_API_KEY_SECRET=your_key_secret
+
+# Create a crypto wallet
+node skills/cashclaw-invoicer/scripts/crypto-ops.js create-wallet
+
+# Check balance
+node skills/cashclaw-invoicer/scripts/crypto-ops.js get-balance
+
+# Transfer USDC to client
+node skills/cashclaw-invoicer/scripts/crypto-ops.js transfer \
+  --to 0x... \
+  --amount 10 \
+  --currency usdc
+```
+
+**Benefits of Crypto:**
+- ⚡ Instant settlements
+- 🌎 Global (no borders)
+- 💰 Lower fees than Stripe
+- 🔒 Non-custodial (you control the wallet)
 
 ## Available Services
 
@@ -186,11 +227,17 @@ cashclaw social --platform linkedin --type weekly
 cashclaw social --platforms all --type monthly
 cashclaw social analytics --period "2026-02"
 
-# Invoicing
+# Invoicing (Stripe)
 cashclaw invoice --client "email" --amount 29 --service "SEO Audit"
 cashclaw invoice --list --status unpaid
 cashclaw invoice --remind --overdue
 cashclaw invoice --refund --invoice "in_xxxxx"
+
+# Crypto Payments (Coinbase CDP)
+node skills/cashclaw-invoicer/scripts/crypto-ops.js create-wallet
+node skills/cashclaw-invoicer/scripts/crypto-ops.js get-address
+node skills/cashclaw-invoicer/scripts/crypto-ops.js get-balance
+node skills/cashclaw-invoicer/scripts/crypto-ops.js transfer --to 0x... --amount 1 --currency usdc
 
 # Configuration
 cashclaw config                  # Show current config
